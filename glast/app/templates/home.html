@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" type="text/css" href="{% static 'home.css' %}">
+
+    <title>Home</title>
+</head>
+
+<body>
+    <h1>Home page</h1>
+    <h2>If Not Registered? <a href="{% url 'index1' %}">Register</a></h2>
+    <form action="{% url 'game1' %}" method="post">
+        {% csrf_token %}
+        <div>
+            <h3>Create Room/Join Room</h3>
+        </div>
+        {%if error_msg %}
+        <h1>Invalid Username or password</h1><br>
+        {% endif %}
+        {{homeform.username.label}}
+        {{homeform.username }}<br>
+        {{homeform.password.label}}
+        {{homeform.password}}<br>
+        {{homeform.groupname.label}}
+        {{homeform.groupname }}
+
+        <button type="submit">Submit</button>
+    </form>
+    <div id="error-message"></div>
+</body>
+
+</html>

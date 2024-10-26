@@ -1,0 +1,100 @@
+body {
+    background-color: rgb(203, 254, 254);
+}
+
+#playerlist {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 10vh;
+    gap: 10px;
+    /* Space between circles */
+}
+
+#playerlist div {
+    position: relative;
+    width: 20vw;
+    /* Set fixed width */
+    height: 20vw;
+    /* Set fixed height */
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#playerlist div::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: conic-gradient(red, yellow, green, blue, black);
+    border-radius: 50%;
+    animation: rotate 5s linear infinite;
+}
+
+#playerlist p {
+    position: relative;
+    width: 15vw;
+    /* Set fixed width */
+    height: 15vw;
+    /* Set fixed height */
+    background-color: rgb(203, 254, 254);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+    /* Ensure text is above the rotating background */
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* for card */
+#your_cards {
+    background-color: blue;
+    width: 100vw;
+    height: 50vh;
+    display: flex;
+    align-items: center;
+    border: 2px solid blueviolet;
+
+}
+
+.card {
+    box-shadow: -5px 5px 8px rgb(33, 33, 33);
+    width: 100px;
+    height: 200px;
+    margin-right: -65px;
+    cursor: grab;
+    background-color: white;
+}
+
+#right {
+    min-height: 220px;
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 20px;
+
+}
+
+/* playing cards div */
+.playingcardsdiv {
+    min-height: 220px;
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    background-color: bisque;
+
+}

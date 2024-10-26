@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{% static 'game.css' %}">
+
+    <title>Document</title>
+</head>
+
+<body>
+    <h2>Katte</h2>
+
+    <!-- For accessing django template variables in javascript -->
+    {{ user_name | json_script:'user_name1' }}
+    {{ password | json_script:'password1' }}
+    {{ group_name | json_script:'group_name1' }}
+
+
+    <!-- Game players display -->
+    <div>
+        <h4>Players</h4>
+    </div>
+    <div id="playerlist">
+
+
+
+    </div>
+    <div id="start_game">
+
+    </div>
+
+    <!-- displayig all cards user has -->
+    <div class="playingcardsdiv" id="left">
+        <h1>playingcardsdiv div</h1>
+    </div>
+    <br>
+    <hr>
+    <hr>
+    <h4>Your crads</h4>
+    <div id="right" class="usercardsdiv">
+
+    </div>
+</body>
+<script>
+
+
+
+    document.addEventListener('DOMContentLoaded', function (e) {
+        const user_name = document.getElementById("user_name1").innerText
+        const password = document.getElementById("password1").innerText
+        const group_name = document.getElementById("group_name1").innerText
+        console.log(user_name, password, group_name);
+
+
+        const ws = new WebSocket('ws://' + '127.0.0.1:8000' + '/ws/game/' + JSON.parse(group_name));
+
+
+        ws.onopen = function (event) {
+            console.log("Connected...")
+            const message = {
+                content: {
+                    types: 'user', user_name1: user_name, password1: password, group_name1: group_name
+                }
+            };
+
+            // Send the message as a JSON string
+            ws.send(JSON.stringify(message));
+            console.log(JSON.stringify(message));
+        }
+
+
+
+        ws.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            console.log("Logged message....", data,);
+
+            //this is not group_send , taking new joiner and storing that username in browsers loaclstorage for future use
+            if (data['message'] == 'user_name') {
+                localStorage.setItem("username", data['username'])
+            }
+
+            if (data['redirect'] == 'home/') {   //data['redirect'] will be undefined if no value is passed
+                window.location.href = 'http://127.0.0.1:8000/error'
+            }
+
+
+            else if ('user_joined' in data && Array.isArray(data['user_joined'])) {
+                // storing the user_joined array in browser for future use
+                localStorage.setItem("user_joined", JSON.stringify(data['user_joined']));
+
+                // setting the admin name of the game in browser
+                if (data['user_joined'].length > 0) {
+                    localStorage.setItem("admin", data['user_joined'][0]);
+                }
+
+                const playerList = document.getElementById("playerlist");
+                playerList.innerHTML = '';
+
+                // The user is verified and group created or newly joined username is returned
+                data['user_joined'].forEach(function (user) {
+                    // Create a new <div> element
+                    var node = document.createElement("div");
+
+                    // Set the inner HTML of the <div> to a <p> element containing the user's name
+                    node.innerHTML = "<p>" + user + "</p>";
+
+                    // Append the <div> to the element with the ID 'playerList'
+                    playerList.appendChild(node);
+
+                });
+
+            }
+
+
+
+
+
+
+            if (data['cardlist']) {
+                var username = localStorage.getItem("username")
+                const my_cards = data['cardlist'][username]
+                console.log("my cards...", my_cards)
+
+                localStorage.setItem("cardlistofuser", my_cards)
+                // Split the string into an array based on spaces
+                var cardArray = my_cards.split(" ");
+
+                // displaying all cards of the perticular user
+                const your_cards_div = document.getElementsByClassName('usercardsdiv')[0]
+
+                //storing length of card to get to knoe card is added by the user
+                localStorage.setItem("cardlength", cardArray.length)
+
+                // Iterate over the array
+                for (var i = 0; i < cardArray.length; i++) {
+                    console.log(cardArray[i]); // This will log each card string one by one
+
+                    // displaying all cards of the perticular user
+                    var newcard = document.createElement("div")
+                    newcard.id = cardArray[i]
+                    newcard.innerText = cardArray[i]
+                    newcard.className = "card"
+                    //newcard.draggable = "true"
+                    your_cards_div.appendChild(newcard)
+                }
+
+                if (localStorage.getItem("username") == data['start_game_player']) {
+
+                    // for drag drop events
+                    var cardslist = document.getElementsByClassName("card");
+                    var leftbox = document.getElementById("left");
+                    var rightbox = document.getElementById("right");
+                    var selected_card = null;
+
+                    function getLeftBoxCoordinates() {
+                        var rect = leftbox.getBoundingClientRect();
+                        return rect;
+                    }
+
+                    // Add dragstart event listener to each card for desktop support
+                    for (let card of cardslist) {
+                        card.addEventListener("dragstart", function (e) {
+                            selected_card = e.target;
+                        });
+                    }
+
+
+                    // Add drop event listeners for leftbox
+                    leftbox.addEventListener("drop", function (e) {
+                        e.preventDefault();
+                        var dropX = e.clientX;
+                        var dropY = e.clientY;
+                        var leftBoxCoords = getLeftBoxCoordinates();
+
+                        // Check if the drop point is within the left box coordinates
+                        if (dropX >= leftBoxCoords.left && dropX <= leftBoxCoords.right &&
+                            dropY >= leftBoxCoords.top && dropY <= leftBoxCoords.bottom) {
+                            leftbox.appendChild(selected_card);
+                            selected_card.style.position = "static";
+                            selected_card.draggable = false;
+                            selected_card.style.cursor = "default";
+                            selected_card.addEventListener("click", function (event) {
+                                event.preventDefault(); // Prevents the card from being appended to the end
+                            });
+                        }
+
+                        selected_card = null;
+                    });
+
+                    // Add dragover event listener to allow drop on leftbox and rightbox
+                    leftbox.addEventListener("dragover", function (e) {
+                        e.preventDefault();
+                    });
+
+                    rightbox.addEventListener("dragover", function (e) {
+                        e.preventDefault();
+                    });
+
+                    // Add touchstart and touchmove event listeners to each card for mobile support
+                    for (let card of cardslist) {
+                        card.addEventListener("touchstart", function (e) {
+                            selected_card = e.target;
+                            e.target.style.position = "absolute";
+                        });
+
+                        card.addEventListener("touchmove", function (e) {
+                            var touch = e.touches[0];
+                            var target = e.target;
+                            target.style.left = touch.pageX - target.offsetWidth / 2 + 'px';
+                            target.style.top = touch.pageY - target.offsetHeight / 2 + 'px';
+                            e.preventDefault();
+                        });
+
+                        card.addEventListener("touchend", function (e) {
+                            e.preventDefault();
+                            var touch = e.changedTouches[0];
+                            var dropX = touch.clientX;
+                            var dropY = touch.clientY;
+                            var leftBoxCoords = getLeftBoxCoordinates();
+
+                            // Check if the drop point is within the left box coordinates
+                            if (dropX >= leftBoxCoords.left && dropX <= leftBoxCoords.right &&
+                                dropY >= leftBoxCoords.top && dropY <= leftBoxCoords.bottom) {
+                                leftbox.appendChild(selected_card);
+                                selected_card.style.position = "static";
+                                selected_card.draggable = true;
+                                selected_card.style.cursor = "default";
+                                selected_card.addEventListener("click", function (event) {
+                                    event.preventDefault(); // Prevents the card from being appended to the end
+                                });
+                            }
+
+                            selected_card = null;
+                        });
+                    }
+                }//end of username verification
+
+                //making the cards draggable for authenticated user
+
+
+
+
+
+                //after cardlist is arranged then we have to start game by sending start request to server
+
+                ws.send(
+                    JSON.stringify(
+                        {
+                            content: {
+                                types: 'start_actual_game',
+                                username: localStorage.getItem("username")
+                            }
+                        }
+                    )
+                )
+
+
+                //to send the card that have user picked
+                // first find the cardID or cardname and then send to server/consumer
+                // cardid = document.getElementBy()
+                // ws.send(
+                //     JSON.stringify(
+                //         {
+                //             content: {
+                //                 types: 'card',
+                //                 username: localStorage.getItem("username"),
+                //                 // card_name:
+                //             }
+                //         }
+                //     )
+                // )
+
+            }//end of if(data['cardlist'])
+
+            // var user = localStorage.getItem("username")
+            // if (localStorage.getItem("cardlistofuser") != null) {
+            //     my_cardslist = localStorage.getItem("cardlistofuser")
+            //     my_cardslist = my_cardslist.split(' '); // Split the string into an array of card values
+
+            //     console.log("cardlist....", my_cardslist, typeof (my_cardslist));
+            //     console.log("logging users cardlist...", my_cardslist);
+
+            //     var cardlength = (document.getElementById("right")).childElementCount
+            //     console.log("legth ...", cardlength);
+            //     if (localStorage.getItem("cardlength") == my_cardslist.length) {
+            //         for (var i = 0; i < my_cardslist.length; i++) {
+            //             console.log(cardArray[i]);
+            //             newcard = document.getElementById(cardArray[i])
+            //             newcard.draggable = "true"
+            //         }
+
+            //     }
+            //     else if (localStorage.getItem("cardlength") > cardlength) {
+            //         // if the card is dragged then the users ter is over and making the card drag proprty false
+            //         for (var i = 0; i < my_cardslist.length; i++) {
+            //             console.log(cardArray[i]);
+            //             newcard = document.getElementById(cardArray[i])
+            //             newcard.draggable = "false"
+            //         }
+
+            //     }
+            // }
+
+
+
+
+        }//end of onmessage from websocket
+
+
+        // Add start button if username matches admin and the button hasn't been added yet
+
+        if (localStorage.getItem("username") == localStorage.getItem("admin")) {
+            const start_btn_div = document.getElementById('start_game');
+            var startbtn = document.createElement("button");
+            startbtn.id = "start_btn";
+            startbtn.innerText = "START GAME";
+            start_btn_div.appendChild(startbtn);
+        }
+
+        // Add event listener to the start button
+        startbtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            ws.send(
+                JSON.stringify(
+                    {
+                        content: {
+                            types: 'start_game'
+                        }
+                    }
+                )
+            );
+        });
+
+
+        ws.onclose = function (event) {
+            console.log("Disconnected...")
+        }
+
+    });
+</script>
+
+
+</html>
